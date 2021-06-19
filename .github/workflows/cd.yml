@@ -1,0 +1,32 @@
+name: Build image
+
+on:
+  push:
+    branches: main
+
+jobs:
+  build-container:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Login to registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push container image
+      id: docker_build_and_push
+      uses: docker/build-push-action@v2
+      with:
+        file: Dockerfile
+        tags: ghcr.io/gmile/dls:latest
+        push: true
+
+# TODO:
+# 
+#   - explore refreshing home stack, see the API:
+#     https://app.swaggerhub.com/apis/portainer/portainer-ce/2.5.1#/stacks/StackUpdate
