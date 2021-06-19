@@ -19,10 +19,26 @@ defmodule Router do
   plug(:match)
   plug(:dispatch)
 
+  # TODO: this is not really needed. Instead of this, update "save-from-tg" URL
+  # below to one of the following:
+  #
+  #   post "/:tg_bot_token/save"
+  #   post "/:tg_bot_token/save-from-tg"
+  #   post "/:random-string-configured-during-webhook-setup/save"
+  #   post "/:random-string-configured-during-webhook-setup/save-from-tg"
+  #
+  #     Memo: to configure WebHook, run:
+  #
+  #       curl "https://api.telegram.org/botxxxxxxxxxx:yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy/setWebhook?url=https://server.com/optionally/some-path"
+  #
   post "/:tg_bot_token" when tg_bot_token == @tg_bot_token do
     send_resp(conn, 200, "OK")
   end
 
+  # TODO: Add support for:
+  #
+  #   https://github.com/mikf/gallery-dl
+  #
   # Save
   post "/save-from-tg" do
     Logger.info(inspect(conn.req_headers))

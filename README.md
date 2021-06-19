@@ -30,6 +30,12 @@
 
 5. Open bot in TG, send it a link from Twitter, YouTube or Instagram.
 
+### Building a Docker container
+
+```
+docker build --label org.opencontainers.image.source=https://github.com/gmile/dls .
+```
+
 ### Running in Docker
 
 ```bash
