@@ -36,11 +36,6 @@ defmodule Router do
     send_resp(conn, 200, "OK")
   end
 
-  # TODO: Add support for:
-  #
-  #   https://github.com/mikf/gallery-dl
-  #
-  # Save
   post "/save-from-tg" do
     %{pid: pid} = Task.async(fn -> process_message(conn.body_params) end)
 
@@ -79,6 +74,11 @@ defmodule Router do
     {lines, status} =
       Enum.reduce_while([:youtube_dl, :gallery_dl], {[], 0}, fn tool, {acc_lines, _status} ->
         case apply(Router, tool, [text, log]) do
+          # Sometimes youtube-dl will download nothing. Example: https://www.instagram.com/p/CQT6lsNgBGc
+          # The exit code in this case is 0. But no downloads.
+          #
+          # TODO: fix this.
+          #
           {lines, 0} -> {:halt, {lines, 0}}
           {lines, status} -> {:cont, {acc_lines ++ lines, status}}
         end
