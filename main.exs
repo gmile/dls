@@ -5,6 +5,7 @@ require Logger
 defmodule Router do
   use Plug.Router
 
+  @tmp_dir System.tmp_dir()
   @tg_bot_token System.fetch_env!("TG_BOT_TOKEN")
   @download_path System.fetch_env!("DOWNLOAD_PATH")
   @download_name_template System.fetch_env!("DOWNLOAD_NAME_TEMPLATE")
@@ -42,15 +43,65 @@ defmodule Router do
   # Save
   post "/save-from-tg" do
     Logger.info(inspect(conn.req_headers))
-    %{"message" => %{"text"=> url}} = conn.body_params
+    Logger.info(inspect(conn.body_params))
 
-    %{pid: pid} = Task.async(fn ->
-      Logger.info("Calling: youtube-dl #{url} --output #{@output}")
-      System.cmd("youtube-dl", [url, "--output", @output], into: IO.stream())
-      Logger.info("Saved: #{url}")
-    end)
+    %{pid: pid} = Task.async(fn -> process_message(conn.body_params) end)
 
-    send_resp(conn, 202, "OK - queuedd task #{inspect(pid)}")
+    send_resp(conn, 202, "OK - queued task #{inspect(pid)}")
+  end
+
+  def say(chat_id, message_id, text) do
+    query = URI.encode_query(%{
+      text: text,
+      chat_id: chat_id,
+      parse_mode: "Html",
+      reply_to_message_id: message_id,
+      disable_notification: true,
+      disable_web_page_preview: true
+    })
+
+    :httpc.request("https://api.telegram.org/bot#{@tg_bot_token}/sendMessage?#{query}")
+  end
+
+  def process_message(%{"message" => %{"message_id" => message_id, "text"=> text, "chat" => %{"id" => chat_id}}}) do
+    Logger.info("Calling: youtube-dl #{text} --output #{@output}")
+
+    {log, log_path} = start_log()
+
+    {lines, status} = System.cmd("youtube-dl", [text, "--output", @output], into: log, stderr_to_stdout: true)
+
+    say(chat_id, message_id, log(status, lines))
+
+    File.rm!(log_path)
+
+    Logger.info("Saved: #{text}")
+  end
+
+  defp start_log() do
+    log_path = @tmp_dir <> (:erlang.monotonic_time |> to_string() |> Base.encode64())
+
+    File.touch!(log_path)
+
+    stream =
+      File.stream!(log_path, [])
+      |> Stream.reject(&String.starts_with?(&1, "\r\e[K[download]"))
+      |> Enum.to_list()
+
+    {stream, log_path}
+  end
+
+  def log(0, _lines) do
+    """
+    <b>Saved</b>
+    """
+  end
+
+  def log(_status, lines) do
+    """
+    <b>Failed to save. Log:</b>
+
+    <pre>#{lines}</pre>
+    """
   end
 
   match _ do
