@@ -42,9 +42,6 @@ defmodule Router do
   #
   # Save
   post "/save-from-tg" do
-    Logger.info(inspect(conn.req_headers))
-    Logger.info(inspect(conn.body_params))
-
     %{pid: pid} = Task.async(fn -> process_message(conn.body_params) end)
 
     send_resp(conn, 202, "OK - queued task #{inspect(pid)}")
