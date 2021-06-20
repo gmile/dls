@@ -63,6 +63,17 @@ defmodule Router do
     :httpc.request("https://api.telegram.org/bot#{@tg_bot_token}/sendMessage?#{query}")
   end
 
+  def process_message(%{"message" => %{"message_id" => message_id, "text"=> "all", "chat" => %{"id" => chat_id}}}) do
+    message =
+      """
+      <pre>
+      #{Path.wildcard(@download_path <> "/*") |> Enum.join("\n")}
+      </pre>
+      """
+
+    say(chat_id, message_id, message)
+  end
+
   def process_message(%{"message" => %{"message_id" => message_id, "text"=> text, "chat" => %{"id" => chat_id}}}) do
     Logger.info("Calling: youtube-dl #{text} --output #{@output}")
 
