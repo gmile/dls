@@ -68,7 +68,13 @@ defmodule Router do
 
     {log, log_path} = start_log()
 
-    {lines, status} = System.cmd("youtube-dl", [text, "--output", @output], into: log, stderr_to_stdout: true)
+    {lines, status} =
+      Enum.reduce_while([:youtube_dl, :gallery_dl], {[], 0}, fn tool, {acc_lines, _status} ->
+        case apply(Router, tool, [text, log]) do
+          {lines, 0} -> {:halt, {lines, 0}}
+          {lines, status} -> {:cont, {acc_lines ++ lines, status}}
+        end
+      end)
 
     say(chat_id, message_id, log(status, lines))
 
@@ -76,6 +82,10 @@ defmodule Router do
 
     Logger.info("Saved: #{text}")
   end
+
+  def youtube_dl(text, log), do: System.cmd("youtube-dl", [text, "--output", @output], into: log, stderr_to_stdout: true)
+
+  def gallery_dl(text, log), do: System.cmd("gallery-dl", ["--dest", @download_path, text], into: log, stderr_to_stdout: true)
 
   defp start_log() do
     log_path = @tmp_dir <> (:erlang.monotonic_time |> to_string() |> Base.encode64())
